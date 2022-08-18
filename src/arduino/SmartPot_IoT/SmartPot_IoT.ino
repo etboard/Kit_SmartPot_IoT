@@ -1,6 +1,6 @@
 /******************************************************************************************
- * FileName     : SmartLight_iot.ino
- * Description  : 이티보드 스마트 가로등 코딩 키트(IoT)
+ * FileName     : SmartPot_IoT.ino
+ * Description  : 이티보드 스마트 화분 코딩 키트(IoT)
  * Author       : SCS
  * Created Date : 2022.08.06
  * Reference    : 
@@ -28,10 +28,9 @@ APP_CONFIG app;
 //==========================================================================================
 // 전역 변수 선언                                   
 //==========================================================================================
-int TRIG = D9;                                    // 초음파 송신 핀
-int ECHO = D8;                                    // 초음파 수신 핀
-int brightness_value;                             // 조도 센서 값(밝기)
-float distance_value;                             // 초음파 센서 값(거리)
+int moistureValue;                             // 토양수분센서 값
+int moisturePin = A3;
+const int threshold = 1000;
 
 
 //==========================================================================================
@@ -41,8 +40,9 @@ void setup()                                      // 설정 함수
 //------------------------------------------------------------------------------------------
 {
   app.setup();                                    // 응용 프로그램 기본 설정
-
   custom_setup();                                 // 사용자 맞춤형 설정
+  app.oled.setup();
+
 }
 
 
@@ -55,8 +55,11 @@ void custom_setup()                               // 사용자 맞춤형 설정 
   //----------------------------------------------------------------------------------------
   // 초음파 센서 핀 설정                            
   //----------------------------------------------------------------------------------------
-  pinMode(TRIG, OUTPUT);                          // 초음파 송신 핀을 출력 모드로 설정
-  pinMode(ECHO, INPUT);                           // 초음파 수신 핀을 입력 모드로 설정
+  pinMode(D2, OUTPUT);                            // D2핀을 출력 모드로 설정
+  pinMode(D3, OUTPUT);                            // D3핀을 출력 모도로 설정
+  
+  pinMode(SDA, INPUT);
+  pinMode(SCL, INPUT);                            // OLED 수신 핀을 입력 모드로 설정
 }
 
 
@@ -113,32 +116,9 @@ void do_sensing_process()                         // 센싱 처리 함수
 {
   
   //----------------------------------------------------------------------------------------
-  // 조도 값 센싱하기; CDS 센서
+  // 토양 수분 값 센싱하기
   //----------------------------------------------------------------------------------------  
-  brightness_value = analogRead(A3);              // 조도 센서 읽기
-
-  //----------------------------------------------------------------------------------------
-  // 거리 값 센싱하기; 초음파 센서
-  //----------------------------------------------------------------------------------------  
-  pinMode(TRIG, OUTPUT);                          // TRIG 핀을 출력 모드로 설정
-  pinMode(ECHO, INPUT);                           // ECHO 핀을 입력 모드로 설정
-  delay(10);                                      // 10/1000초 만큼 대기
-  
-  //----------------------------------------------------------------------------------------
-  // 초음파 측정
-  //----------------------------------------------------------------------------------------  
-  digitalWrite(TRIG, LOW);
-  digitalWrite(ECHO, LOW);
-  delayMicroseconds(2);
-  digitalWrite(TRIG, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(TRIG, LOW);
-  
-  //----------------------------------------------------------------------------------------
-  // 초음파 수신 값으로 거리 계산
-  //----------------------------------------------------------------------------------------  
-  float duration = pulseIn (ECHO, HIGH);      
-  distance_value = duration * 17 / 1000;  
+  moistureValue = 4095-analogRead(moisturePin);   // 토양수분 센서 읽기
 }
 
 
@@ -151,29 +131,27 @@ void do_automatic_process()                       // 자동화 처리 함수
   //----------------------------------------------------------------------------------------  
   // 가로등 모듈의 LED 제어
   //----------------------------------------------------------------------------------------  
-  pinMode(D2, OUTPUT);                            // D2핀을 출력 모드로 설정
-  pinMode(D3, OUTPUT);                            // D3핀을 출력 모도로 설정
   
-  if (brightness_value < 1000) {                  // 밝기가 1000 미만이면
-    digitalWrite(D3, HIGH);                       // D3핀을 켜기
-    app.dg_Write(D3, HIGH);                       // D3핀 값 저장하기
-    
-    if (distance_value < 8) {                     // 거리가 8cm 미만이면
-      digitalWrite(D2, HIGH);                     // D2핀을 켜기
-      app.dg_Write(D2, HIGH);                     // D2핀 값 저장하기
-    }
-    else {                                        // 그렇지 않으면
-      digitalWrite(D2, LOW);                      // D2핀을 끄기
-      app.dg_Write(D2, LOW);                      // D2핀 값 저장하기
-    }
-    
+  if (moistureValue < threshold) {                // 토양수분 센서값이 threshold 미만이면
+  digitalWrite(D4, HIGH);                         // 워터펌프 작동
+  digitalWrite(D5, LOW);                          // 
+  } else {
+  digitalWrite(D4, LOW);                          // 작동 멈춤
+  digitalWrite(D5, LOW);                          // 
   }
-  else {                                          // 그렇지 않으면
-    digitalWrite(D2, LOW);                        // D2핀 끄기
-    app.dg_Write(D2, LOW);                        // D2핀 값 저장하기
-    digitalWrite(D3, LOW);                        // D3핀을 끄기
-    app.dg_Write(D3, LOW);                        // D3핀 값 저장하기
-  }
+    
+  // OLED 텍스트 표시
+  char text[32] = "moist: ";
+  char value[32];
+  String str = String(moistureValue, DEC);    
+  str.toCharArray(value,6);
+  strcat(text,value);
+
+  delay(100);
+  app.oled.setLine(1,"* Smart POT *");            // OLED 첫 번째 줄
+  app.oled.setLine(2,text);                       // OLED 두 번째 줄
+  app.oled.setLine(3,"-------------");            // OLED 세 번째 줄
+  app.oled.display();
 }
 
 
@@ -184,8 +162,7 @@ void send_sensor_value()                          // 센서 값 송신 함수
   // 예시 {"distance":88.08,"brightness":2914}
   
   DynamicJsonDocument doc(256);                   // json 
-  doc["distance"] = app.etboard.round2(distance_value); // 거리 값 송신, 소수점 2자리
-  doc["brightness"] = brightness_value;           // 조도 값 송신
+  doc["moisture"] = moistureValue; // 거리 값 송신, 소수점 2자리
 
   String output;                                  // 문자열 변수
   serializeJson(doc, output);                     // json을 문자열로 변환
@@ -200,8 +177,7 @@ void send_digital_output_value()                  // 디지털 출력 값 송신
   // 예시 {"D2":0,"D3":0}
   
   DynamicJsonDocument doc(256);                   // json 
-  doc["D2"] = app.dg_Read(D2);                    // D2 핀 값
-  doc["D3"] = app.dg_Read(D3);                    // D3 핀 값
+  doc["D5"] = app.dg_Read(D5);                    // D2 핀 값
 
   String output;                                  // 문자열 변수
   serializeJson(doc, output);                     // json을 문자열로 변환
@@ -239,9 +215,21 @@ void recv_automatic_mode(void)                    // 동작 모드 수신 함수
         digitalWrite(D5, HIGH);                   // D5 핀 LED 켜기
         }
       });
+      
+  app.mqtt.client.subscribe(
+    app.mqtt.get_cmnd_prefix() + "/pump", // operation_mode 명령을 수신
+    [&](const String & payload) {                 // 명령 내용을 payload에 저장       
+      pinMode(D5, OUTPUT);                        // D5 핀을 출력 모드로 설정
+      if (payload == "1"){                // 자동모드 설정 명령이면
+          digitalWrite(D4, HIGH);                         // 워터펌프 작동
+          digitalWrite(D5, LOW);                     //
+      }
+      else{
+          digitalWrite(D4, LOW);                          // 작동 멈춤
+          digitalWrite(D5, LOW);                          // 
+        }
+      });
 }
-
-
 //==========================================================================================
 //                                                    
 // (주)한국공학기술연구원 http://et.ketri.re.kr       
