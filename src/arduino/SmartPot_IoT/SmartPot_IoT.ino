@@ -8,7 +8,7 @@
  * Modified     : 
 ******************************************************************************************/
 const char* board_hardware_verion = "ETBoard_V1.1";
-const char* board_firmware_verion = "smartLgt_0.91";
+const char* board_firmware_verion = "smartPot_0.91";
 
 //================================================-=========================================
 // 응용 프로그램 구성 사용하기                       
@@ -23,15 +23,13 @@ APP_CONFIG app;
 // 메시지 송신 주기 : 주의!!!! 너무 빨리 또는 많이 보내면 서버에서 거부할 수 있음(Banned)
 //------------------------------------------------------------------------------------------
 #define NORMAL_SEND_INTERVAL  (1000 * 1)          // 권장 5초 (단위: 초/1000)
-
+const int threshold = 1000;
 
 //==========================================================================================
 // 전역 변수 선언                                   
 //==========================================================================================
-int moistureValue;                                // 토양수분센서 값
-int moisturePin = A3;
-const int threshold = 1000;
-
+int moistureValue;                                // 토양수분 센서 값
+int moisturePin = A3;                             // 토양수분 센서 핀
 
 //==========================================================================================
 void setup()                                      // 설정 함수 
@@ -41,7 +39,7 @@ void setup()                                      // 설정 함수
 {
   app.setup();                                    // 응용 프로그램 기본 설정
   custom_setup();                                 // 사용자 맞춤형 설정
-  app.oled.setup();
+  app.oled.setup();                               // OLED 기본 설정
 
 }
 
@@ -116,7 +114,7 @@ void do_sensing_process()                         // 센싱 처리 함수
 {
   
   //----------------------------------------------------------------------------------------
-  // 토양 수분 값 센싱하기
+  // 토양 수분 값 측정
   //----------------------------------------------------------------------------------------  
   moistureValue = 4095-analogRead(moisturePin);   // 토양수분 센서 읽기
 }
@@ -129,15 +127,15 @@ void do_automatic_process()                       // 자동화 처리 함수
 //------------------------------------------------------------------------------------------
 {  
   //----------------------------------------------------------------------------------------  
-  // 가로등 모듈의 LED 제어
+  // 스마트 화분 모듈 모터 제어
   //----------------------------------------------------------------------------------------  
   
   if (moistureValue < threshold) {                // 토양수분 센서값이 threshold 미만이면
-  digitalWrite(D4, HIGH);                         // 워터펌프 작동
-  digitalWrite(D5, LOW);                          // 
+    digitalWrite(D4, HIGH);                       // 워터펌프 작동
+    digitalWrite(D5, LOW);                        // 
   } else {
-  digitalWrite(D4, LOW);                          // 작동 멈춤
-  digitalWrite(D5, LOW);                          // 
+    digitalWrite(D4, LOW);                        // 작동 멈춤
+    digitalWrite(D5, LOW);                        // 
   }
     
   // OLED 텍스트 표시
@@ -162,7 +160,7 @@ void send_sensor_value()                          // 센서 값 송신 함수
   // 예시 {"distance":88.08,"brightness":2914}
   
   DynamicJsonDocument doc(256);                   // json 
-  doc["moisture"] = moistureValue; // 거리 값 송신, 소수점 2자리
+  doc["moisture"] = moistureValue;                // 토양수분 값 전송
 
   String output;                                  // 문자열 변수
   serializeJson(doc, output);                     // json을 문자열로 변환
@@ -181,7 +179,7 @@ void send_digital_output_value()                  // 디지털 출력 값 송신
 
   String output;                                  // 문자열 변수
   serializeJson(doc, output);                     // json을 문자열로 변환
-  app.mqtt.publish_tele("/digital_output", output);  // 송신
+  app.mqtt.publish_tele("/digital_output", output); // 송신
   
   app.update_digital_value();
   
@@ -217,16 +215,15 @@ void recv_automatic_mode(void)                    // 동작 모드 수신 함수
       });
       
   app.mqtt.client.subscribe(
-    app.mqtt.get_cmnd_prefix() + "/pump", // operation_mode 명령을 수신
+    app.mqtt.get_cmnd_prefix() + "/pump",         // pump 명령을 수신
     [&](const String & payload) {                 // 명령 내용을 payload에 저장       
-      pinMode(D5, OUTPUT);                        // D5 핀을 출력 모드로 설정
-      if (payload == "1"){                // 자동모드 설정 명령이면
-          digitalWrite(D4, HIGH);                         // 워터펌프 작동
-          digitalWrite(D5, LOW);                     //
+      if (payload == "1"){                        // 자동모드 설정 명령이면
+          digitalWrite(D4, HIGH);                 // 워터펌프 작동
+          digitalWrite(D5, LOW);                  //
       }
       else{
-          digitalWrite(D4, LOW);                          // 작동 멈춤
-          digitalWrite(D5, LOW);                          // 
+          digitalWrite(D4, LOW);                  // 작동 멈춤
+          digitalWrite(D5, LOW);                  // 
         }
       });
 }
