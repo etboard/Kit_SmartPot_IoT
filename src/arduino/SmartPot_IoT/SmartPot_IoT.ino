@@ -2,9 +2,9 @@
  * FileName     : SmartPot_IoT.ino
  * Description  : 이티보드 스마트 화분 코딩 키트(IoT)
  * Author       : SCS
- * Created Date : 2022.08.06
+ * Created Date : 2022.08.18
  * Reference    : 
- * Modified     : 2022.08.10 : SCS
+ * Modified     : 2022.08.19 : LSC
  * Modified     : 
 ******************************************************************************************/
 const char* board_hardware_verion = "ETBoard_V1.1";
@@ -28,7 +28,7 @@ APP_CONFIG app;
 //==========================================================================================
 // 전역 변수 선언                                   
 //==========================================================================================
-int moistureValue;                             // 토양수분센서 값
+int moistureValue;                                // 토양수분센서 값
 int moisturePin = A3;
 const int threshold = 1000;
 
