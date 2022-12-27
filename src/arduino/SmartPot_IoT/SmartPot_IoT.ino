@@ -6,11 +6,12 @@
  * Reference    : 
  * Modified     : 2022.08.19 : LSC
  * Modified     : 2022.11.15 : YSY : D5 -> D2, 수분 단위 %
+ * Modified     : 2022.12.27 : YSY : 변수 명명법 통일, 작동 모드 LED -> D4
 ******************************************************************************************/
 const char* board_hardware_verion = "ETBoard_V1.1";
 const char* board_firmware_verion = "smartPot_0.92";
 
-//================================================-=========================================
+//==========================================================================================
 // 응용 프로그램 구성 사용하기                       
 //==========================================================================================
 #include "app_config.h"
@@ -22,126 +23,128 @@ APP_CONFIG app;
 //==========================================================================================
 // 메시지 송신 주기 : 주의!!!! 너무 빨리 또는 많이 보내면 서버에서 거부할 수 있음(Banned)
 //------------------------------------------------------------------------------------------
-#define NORMAL_SEND_INTERVAL  (1000 * 1)          // 권장 5초 (단위: 초/1000)
-const int threshold = 30;                         // 30 %
+#define NORMAL_SEND_INTERVAL  (1000 * 5)                 // 권장 5초 (단위: 초/1000)
 
 //==========================================================================================
-// 전역 변수 선언                                   
+// ETBoard 핀번호 설정                                   
 //==========================================================================================
-int moisture_value;                                // 토양수분 센서 값
-int moisture_pin = A3;                             // 토양수분 센서 핀
-int pump_pin1 = D2;                                // Motor-L Pin1 
-int pump_pin2 = D3;                                // Motor-L Pin2
-int operation_mode_led = D5;                       // 작동 모드 LED
-                              
+int moisture_pin = A3;                                   // 토양수분 센서 핀
+
+int pump_pin1 = D2;                                      // Motor-L Pin1 
+int pump_pin2 = D3;                                      // Motor-L Pin2
+
+int operation_mode_led = D4;                             // 작동 모드 LED
+
+const int moist_threshold = 30;                          // 30 %
+int moisture_value;
+                                 
 //==========================================================================================
-void setup()                                      // 설정 함수 
+void setup()                                             // 설정 함수 
 //==========================================================================================
 // (권장 사항) 이 함수에서는 코딩하지 마십시오. custom_setup()에 코딩하십시오.
 //------------------------------------------------------------------------------------------
 {
-  app.setup();                                    // 응용 프로그램 기본 설정
-  custom_setup();                                 // 사용자 맞춤형 설정
+    app.setup();                                         // 응용 프로그램 기본 설정
+    custom_setup();                                      // 사용자 맞춤형 설정
 }
 
 
 //==========================================================================================
-void custom_setup()                               // 사용자 맞춤형 설정 함수
+void custom_setup()                                      // 사용자 맞춤형 설정 함수
 //==========================================================================================
 {
-  //----------------------------------------------------------------------------------------
-  // 여기에 사용자 맞춤형 설정을 코딩하세요.
-  //----------------------------------------------------------------------------------------
-  pinMode(pump_pin1, OUTPUT);
-  pinMode(pump_pin2, OUTPUT);
-  pinMode(operation_mode_led, OUTPUT);
+    //--------------------------------------------------------------------------------------
+    // 여기에 사용자 맞춤형 설정을 코딩하세요.
+    //--------------------------------------------------------------------------------------
+    pinMode(pump_pin1, OUTPUT);
+    pinMode(pump_pin2, OUTPUT);
+
+    pinMode(operation_mode_led, OUTPUT);
 }
 
 //==========================================================================================
-void loop()                                       // 반복 루틴
+void loop()                                              // 반복 루틴
 //==========================================================================================
-//  (권장 사항) 이 함수를 가능하면 수정하지 마십시오 !!! 
-//  do_sensing_process(), do_automatic_process(), send_sensor_value(), 
-//  send_digital_output_value()를 수정하십시오.
+// (권장 사항) 이 함수를 가능하면 수정하지 마십시오 !!! 
+// do_sensing_process(), do_automatic_process(), send_sensor_value(), 
+// send_digital_output_value()를 수정하십시오.
 //------------------------------------------------------------------------------------------
 {
-  //----------------------------------------------------------------------------------------
-  // MQTT 백그라운드 작동 
-  //----------------------------------------------------------------------------------------
-  app.mqtt.loop();
+    //--------------------------------------------------------------------------------------
+    // MQTT 백그라운드 작동 
+    //--------------------------------------------------------------------------------------
+    app.mqtt.loop();
 
-  //----------------------------------------------------------------------------------------
-  // 센싱 처리
-  //----------------------------------------------------------------------------------------       
-  do_sensing_process();                             
+    //--------------------------------------------------------------------------------------
+    // 센싱 처리
+    //--------------------------------------------------------------------------------------       
+    do_sensing_process();                             
 
-  //----------------------------------------------------------------------------------------
-  // 작동 모드가 automatic 일 경우 자동화 처리
-  //----------------------------------------------------------------------------------------      
-  if(app.operation_mode == "automatic") {         // 수정 금지
-    do_automatic_process();                       // 자동화 처리    
-  }
+    //--------------------------------------------------------------------------------------
+    // 작동 모드가 automatic 일 경우 자동화 처리
+    //--------------------------------------------------------------------------------------      
+    if(app.operation_mode == "automatic") {              // 수정 금지
+        do_automatic_process();                          // 자동화 처리    
+    }
 
-  //----------------------------------------------------------------------------------------
-  // OLED 표시
-  //----------------------------------------------------------------------------------------
-  display_oled();
+    //--------------------------------------------------------------------------------------
+    // OLED 표시
+    //--------------------------------------------------------------------------------------      
+    display_oled();
     
-  //----------------------------------------------------------------------------------------
-  // 주기적으로 메시지 전송 처리
-  //----------------------------------------------------------------------------------------
-  if (millis() - app.lastMillis > NORMAL_SEND_INTERVAL) {  
-    send_sensor_value();                        // 센서 값 송신
-    app.lastMillis = millis();                  // 현재 시각 업데이트
-  }  
+    //--------------------------------------------------------------------------------------
+    // 주기적으로 메시지 전송 처리
+    //--------------------------------------------------------------------------------------
+    if (millis() - app.lastMillis > NORMAL_SEND_INTERVAL) {  
+        send_sensor_value();                             // 센서 값 송신
+        app.lastMillis = millis();                       // 현재 시각 업데이트
+    }  
 
-  //----------------------------------------------------------------------------------------
-  // 디지털 값이 변경되었으면 바로 송신
-  //----------------------------------------------------------------------------------------    
-  if (app.isChanged_digital_value() == true) {   // 디지털 값이 변경 여부
-    send_digital_output_value();                 // 디지털 출력 값 송신
-  }
+    //--------------------------------------------------------------------------------------
+    // 디지털 값이 변경되었으면 바로 송신
+    //--------------------------------------------------------------------------------------    
+    if (app.isChanged_digital_value() == true) {         // 디지털 값이 변경 여부
+        send_digital_output_value();                     // 디지털 출력 값 송신
+    }
 
-  //----------------------------------------------------------------------------------------
-  // 작동 상태 LED 깜밖이기
-  //----------------------------------------------------------------------------------------  
-  app.etboard.normal_blink_led();               
+    //--------------------------------------------------------------------------------------
+    // 작동 상태 LED 깜밖이기
+    //--------------------------------------------------------------------------------------  
+    app.etboard.normal_blink_led();               
 }
 
 
 //==========================================================================================
-void do_sensing_process()                         // 센싱 처리 함수
+void do_sensing_process()                                // 센싱 처리 함수
 //==========================================================================================
-{
-  
-  //----------------------------------------------------------------------------------------
-  // 토양 수분 값 측정
-  //----------------------------------------------------------------------------------------  
-  moisture_value = map(analogRead(moisture_pin), 0, 4095, 100, 0);;   // 토양수분 센서 % 읽기
+{  
+    //--------------------------------------------------------------------------------------
+    // 토양 수분 값 % 측정
+    //--------------------------------------------------------------------------------------  
+    moisture_value = map(analogRead(moisture_pin), 0, 4095, 100, 0);   
 }
 
 
 //==========================================================================================
-void do_automatic_process()                       // 자동화 처리 함수
+void do_automatic_process()                              // 자동화 처리 함수
 //==========================================================================================
 // 여기에 자동화 처리를 코딩하세요.
 //------------------------------------------------------------------------------------------
 {  
-  //----------------------------------------------------------------------------------------  
-  // 스마트 화분 모듈 모터 제어
-  //----------------------------------------------------------------------------------------  
-  
-  if (moisture_value < threshold) {                // 토양수분 센서값이 threshold 미만이면
-    digitalWrite(pump_pin1, HIGH);                 // 워터펌프 작동
-    digitalWrite(pump_pin2, LOW);                  // 
-    app.dg_Write(pump_pin1, HIGH);   
-    app.dg_Write(pump_pin2, LOW);   
-  } else {
-    digitalWrite(pump_pin1, LOW);                  // 워터펌프 멈춤
-    digitalWrite(pump_pin2, LOW);                  // 
-    app.dg_Write(pump_pin1, LOW);   
-    app.dg_Write(pump_pin2, LOW);      
-  }
+    //--------------------------------------------------------------------------------------  
+    // 스마트 화분 모듈 모터 제어
+    //--------------------------------------------------------------------------------------  
+    if (moisture_value < moist_threshold) {              // 토양수분 센서값이 moist_threshold 미만이면
+        digitalWrite(pump_pin1, HIGH);                   // 워터펌프 작동
+        digitalWrite(pump_pin2, LOW);                     
+        app.dg_Write(pump_pin1, HIGH);   
+        app.dg_Write(pump_pin2, LOW);   
+    } else {
+        digitalWrite(pump_pin1, LOW);                    // 워터펌프 멈춤
+        digitalWrite(pump_pin2, LOW);                     
+        app.dg_Write(pump_pin1, LOW);   
+        app.dg_Write(pump_pin2, LOW);      
+    }
 }
 
 
@@ -149,110 +152,110 @@ void do_automatic_process()                       // 자동화 처리 함수
 void display_oled()                                // OLED 표시
 //==========================================================================================
 {      
-  // OLED 텍스트 표시
-  char text[32] = "moist: ";
-  char value[32];
-  String str = String(moisture_value, DEC);    
-  str.toCharArray(value,6);
-  strcat(text,value);
-  strcat(text,"%");
+    // OLED 텍스트 표시
+    char text[32] = "moist: ";
+    char value[32];
+    String str = String(moisture_value, DEC);    
+    str.toCharArray(value,6);
+    strcat(text,value);
+    strcat(text,"%");
 
-  char text2[32] = "pump: ";
-  int pump_state = app.dg_Read(pump_pin1);
-  if (pump_state == 1) {
-    strcat(text2, "On");
-  }
-  else {
-    strcat(text2, "Off");
-  }
+    char text2[32] = "pump: ";
+    int pump_state = app.dg_Read(pump_pin1);
+    if (pump_state == 1) {
+        strcat(text2, "On");
+    }
+    else {
+        strcat(text2, "Off");
+    }
   
-  delay(100);
-  app.oled.setLine(1,"* Smart POT *");            // OLED 첫 번째 줄
-  app.oled.setLine(2,text);                       // OLED 두 번째 줄
-  app.oled.setLine(3,text2);                      // OLED 세 번째 줄
-  app.oled.display();
+    delay(100);
+    app.oled.setLine(1,"* Smart POT *");            // OLED 첫 번째 줄
+    app.oled.setLine(2,text);                       // OLED 두 번째 줄
+    app.oled.setLine(3,text2);                      // OLED 세 번째 줄
+    app.oled.display();
 }
 
 
 //==========================================================================================
-void send_sensor_value()                          // 센서 값 송신 함수
+void send_sensor_value()                                 // 센서 값 송신 함수
 //==========================================================================================
 { 
-  // 예시 {"distance":88.08,"brightness":2914}
-  
-  DynamicJsonDocument doc(256);                   // json 
-  doc["moisture"] = moisture_value;                // 토양수분 값 전송
+    // 예시 {"distance":88.08,"brightness":2914}
+    DynamicJsonDocument doc(256);                        // json 
+    doc["moisture"] = moisture_value;                    // 토양수분 값 전송
 
-  String output;                                  // 문자열 변수
-  serializeJson(doc, output);                     // json을 문자열로 변환
-  app.mqtt.publish_tele("/sensor", output);       // 송신
+    String output;                                       // 문자열 변수
+    serializeJson(doc, output);                          // json을 문자열로 변환
+    app.mqtt.publish_tele("/sensor", output);            // 송신
 }
 
 
 //==========================================================================================
-void send_digital_output_value()                  // 디지털 출력 값 송신 함수
+void send_digital_output_value()                         // 디지털 출력 값 송신 함수
 //==========================================================================================
 {
-  // 예시 {"D2":0,"D3":0}
-  
-  DynamicJsonDocument doc(256);                   // json 
-  doc["state"] = app.dg_Read(pump_pin1);          // 워터펌프 작동 상태
+    // 예시 {"D2":0,"D3":0}
+    DynamicJsonDocument doc(256);                        // json 
+    doc["state"] = app.dg_Read(pump_pin1);               // 워터펌프 작동 상태
 
-  String output;                                  // 문자열 변수
-  serializeJson(doc, output);                     // json을 문자열로 변환
-  app.mqtt.publish_tele("/pump", output);         // 워터펌프
+    String output;                                       // 문자열 변수
+    serializeJson(doc, output);                          // json을 문자열로 변환
+    app.mqtt.publish_tele("/pump", output);              // 워터펌프
   
-  app.update_digital_value();
+    app.update_digital_value();
   
-  delay(100);
+    delay(100);
 }
 
 
 //==========================================================================================
-void onConnectionEstablished()                    // MQTT 연결되었을 때 작동하는 함수
+void onConnectionEstablished()                           // MQTT 연결되었을 때 작동하는 함수
 //==========================================================================================
 {
-  app.mqtt.onConnectionEstablished();             // MQTT 연결되었을 때 작동
-  recv_automatic_mode();                          // 작동 모스 수신 설정
+    app.mqtt.onConnectionEstablished();                  // MQTT 연결되었을 때 작동
+    recv_automatic_mode();                               // 작동 모스 수신 설정
 }
 
 
 //==========================================================================================
-void recv_automatic_mode(void)                    // 작동 모드 수신 함수
+void recv_automatic_mode(void)                           // 작동 모드 수신 함수
 //==========================================================================================
 {
-  app.mqtt.client.subscribe(
-    app.mqtt.get_cmnd_prefix() + "/operation_mode", // operation_mode 명령을 수신
-    [&](const String & payload) {                 // 명령 내용을 payload에 저장       
-      pinMode(operation_mode_led, OUTPUT);        // D5 핀을 출력 모드로 설정
-      if (payload == "automatic"){                // 작동모드가 자동 설정 명령이면
-        app.operation_mode = "automatic";         // 자동 상태 저장
-        digitalWrite(operation_mode_led, HIGH);   // 작동 모드 LED ON
-      }
-      else{
-        app.operation_mode = "manual";            // 수동 상태 저장
-        digitalWrite(operation_mode_led, LOW);    // 작동 모드 LED OFF
+    app.mqtt.client.subscribe(
+        app.mqtt.get_cmnd_prefix() + "/operation_mode",  // operation_mode 명령을 수신
+        [&](const String & payload) {                    // 명령 내용을 payload에 저장       
+            pinMode(operation_mode_led, OUTPUT);         // D4 핀을 출력 모드로 설정
+            if (payload == "automatic"){                 // 작동모드가 자동 설정 명령이면
+                app.operation_mode = "automatic";        // 자동 상태 저장
+                digitalWrite(operation_mode_led, HIGH);  // 작동 모드 LED ON
+            }
+            else{
+                app.operation_mode = "manual";           // 수동 상태 저장
+                digitalWrite(operation_mode_led, LOW);   // 작동 모드 LED OFF
+            }
         }
-      }
-     );
+    );
       
-  app.mqtt.client.subscribe(
-    app.mqtt.get_cmnd_prefix() + "/pump",         // pump 명령을 송신
-    [&](const String & payload) {                 // 명령 내용을 payload에 저장       
-      if (payload == "1"){                        // 자동모드 설정 명령이면
-          digitalWrite(pump_pin1, HIGH);          // 워터펌프 작동
-          digitalWrite(pump_pin2, LOW);           //
-          app.dg_Write(pump_pin1, HIGH);   
-          app.dg_Write(pump_pin2, LOW);             
-      }
-      else{
-          digitalWrite(pump_pin1, LOW);            // 작동 멈춤
-          digitalWrite(pump_pin2, LOW);            // 
-          app.dg_Write(pump_pin1, LOW);   
-          app.dg_Write(pump_pin2, LOW);   
+    app.mqtt.client.subscribe(
+        app.mqtt.get_cmnd_prefix() + "/pump",            // pump 명령을 송신
+        [&](const String & payload) {                    // 명령 내용을 payload에 저장       
+            if (payload == "1"){                         // 자동모드 설정 명령이면
+                digitalWrite(pump_pin1, HIGH);           // 워터펌프 작동
+                digitalWrite(pump_pin2, LOW);               
+                app.dg_Write(pump_pin1, HIGH);   
+                app.dg_Write(pump_pin2, LOW);             
+            }
+            else{
+                digitalWrite(pump_pin1, LOW);            // 작동 멈춤
+                digitalWrite(pump_pin2, LOW);                 
+                app.dg_Write(pump_pin1, LOW);   
+                app.dg_Write(pump_pin2, LOW);   
+            }
         }
-      });
+    );
 }
+
 //==========================================================================================
 //                                                    
 // (주)한국공학기술연구원 http://et.ketri.re.kr       
