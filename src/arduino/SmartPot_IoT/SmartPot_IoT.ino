@@ -223,16 +223,16 @@ void recv_automatic_mode(void)                           // 작동 모드 수신
 //==========================================================================================
 {
     app.mqtt.client.subscribe(
-        app.mqtt.get_cmnd_prefix() + "/operation_mode",  // operation_mode 명령을 수신
+        app.mqtt.get_cmnd_prefix() + "/operation_mode",  // 작동 모드 명령을 수신
         [&](const String & payload) {                    // 명령 내용을 payload에 저장       
-            pinMode(operation_mode_led, OUTPUT);         // D4 핀을 출력 모드로 설정
-            if (payload == "automatic"){                 // 작동모드가 자동 설정 명령이면
-                app.operation_mode = "automatic";        // 자동 상태 저장
-                digitalWrite(operation_mode_led, HIGH);  // 작동 모드 LED ON
+            pinMode(operation_mode_led, OUTPUT);         // operation_mode_led 핀을 출력 모드로 설정
+            if (payload == "automatic"){                 // 명령이 자동이면
+                app.operation_mode = "automatic";        // 작동 모드를 자동으로 설정
+                digitalWrite(operation_mode_led, HIGH);  // 작동 모드 LED 켜기
             }
             else{
-                app.operation_mode = "manual";           // 수동 상태 저장
-                digitalWrite(operation_mode_led, LOW);   // 작동 모드 LED OFF
+                app.operation_mode = "manual";           // 작동 모드를 수동으로 설정
+                digitalWrite(operation_mode_led, LOW);   // 작동 모드 LED 끄기
             }
         }
     );
@@ -240,7 +240,7 @@ void recv_automatic_mode(void)                           // 작동 모드 수신
     app.mqtt.client.subscribe(
         app.mqtt.get_cmnd_prefix() + "/pump",            // pump 명령을 송신
         [&](const String & payload) {                    // 명령 내용을 payload에 저장       
-            if (payload == "1"){                         // 자동모드 설정 명령이면
+            if (payload == "1"){                         // 명령이 자동이면
                 digitalWrite(pump_pin1, HIGH);           // 워터펌프 작동
                 digitalWrite(pump_pin2, LOW);               
                 app.dg_Write(pump_pin1, HIGH);   
