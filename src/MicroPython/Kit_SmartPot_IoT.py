@@ -82,7 +82,7 @@ def do_sensing_proces():                                 # 센싱 처리
     # 토양 수분 값 측정하여 100분율(%)로 환산
     global moisture_value
     moisture_result = moisture_pin.read()                    # 토양 수분 측정값 저장
-    moisture_value = map(moisture_result, 0, 2800, 100, 0)   # 토양 수분 측정값 % 변환
+    moisture_value = map(moisture_result, 0, 4095, 100, 0)   # 토양 수분 측정값 % 변환
 
 
 #===========================================================================================
