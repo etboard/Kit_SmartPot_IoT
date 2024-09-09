@@ -67,7 +67,7 @@ void do_sensing_process()                                // 센싱 처리
 //==========================================================================================
 {
   // 토양 수분 값 측정하여 100분율(%)로 환산
-  moisture_value = map(analogRead(moisture_pin), 0, 2800, 100, 0);
+  moisture_value = map(analogRead(moisture_pin), 0, 4095, 100, 0);
 }
 
 
