@@ -6,7 +6,7 @@
 # Reference    :
 # Modified     : 2024.08.23 : SCS : clean
 # Modified     : 2024.09.03 : PEJ : 펌프 상태 송신 로직 추가, clean
-# Modified     : 2024.10.02 : SCS : WiFi 연결 상태 체
+# Modified     : 2024.10.02 : SCS : WiFi 연결 상태 체크
 # ******************************************************************************************
 board_firmware_verion = "smartPot_0.95";
 
