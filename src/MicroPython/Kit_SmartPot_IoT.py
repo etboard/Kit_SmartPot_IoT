@@ -7,6 +7,7 @@
 # Modified     : 2024.08.23 : SCS : clean
 # Modified     : 2024.09.03 : PEJ : 펌프 상태 송신 로직 추가, clean
 # Modified     : 2024.10.02 : SCS : WiFi 연결 상태 체크
+# Modified     : 2024.10.14 : SCS : WiFi 연결 상태 체크->펌웨어로 변경
 # ******************************************************************************************
 board_firmware_verion = "smartPot_0.95";
 
@@ -193,13 +194,7 @@ def process_pump_control(topic, msg):                    # 워터 펌프 제어 
 if __name__ == "__main__":
     setup(app, et_setup)
     while True:
-        try:
-            loop(app, et_loop, et_short_periodic_process, et_long_periodic_process)
-        except OSError as e:    
-            print('WiFi가 불안정하여 재부팅하겠습니다.')
-            import machine
-            machine.reset()        
-    
+        loop(app, et_loop, et_short_periodic_process, et_long_periodic_process)    
 
 
 #===========================================================================================
